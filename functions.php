@@ -33,6 +33,14 @@ function nuxt_wuppi_companion_setup() {
     
     // Add support for full and wide align images
     add_theme_support( 'align-wide' );
+    
+    // Add support for featured images
+    add_theme_support( 'post-thumbnails' );
+    
+    // Add custom image sizes for featured images
+    add_image_size( 'featured-small', 300, 200, true );
+    add_image_size( 'featured-medium', 600, 400, true );
+    add_image_size( 'featured-large', 1200, 800, true );
 
     // Register navigation menus
     register_nav_menus(
@@ -328,3 +336,69 @@ function nuxt_wuppi_force_page_prefix( $permalink ) {
 
 // We're not modifying category links as requested by the user
 // The term_link filter has been removed
+
+/**
+ * Add featured image to REST API responses
+ */
+function nuxt_wuppi_add_featured_image_to_rest() {
+    // Register featured image field for posts
+    register_rest_field(
+        'post',
+        'featured_image',
+        array(
+            'get_callback'    => 'nuxt_wuppi_get_featured_image',
+            'update_callback' => null,
+            'schema'          => null,
+        )
+    );
+}
+add_action('rest_api_init', 'nuxt_wuppi_add_featured_image_to_rest');
+
+/**
+ * Get featured image data for REST API
+ *
+ * @param array $post The post object
+ * @return array Featured image data
+ */
+function nuxt_wuppi_get_featured_image($post) {
+    if (!has_post_thumbnail($post['id'])) {
+        return null;
+    }
+    
+    $featured_id = get_post_thumbnail_id($post['id']);
+    
+    // Get image in various sizes
+    $small = wp_get_attachment_image_src($featured_id, 'thumbnail');
+    $medium = wp_get_attachment_image_src($featured_id, 'medium');
+    $large = wp_get_attachment_image_src($featured_id, 'large');
+    $full = wp_get_attachment_image_src($featured_id, 'full');
+    
+    // Get custom image sizes
+    $featured_small = wp_get_attachment_image_src($featured_id, 'featured-small');
+    $featured_medium = wp_get_attachment_image_src($featured_id, 'featured-medium');
+    $featured_large = wp_get_attachment_image_src($featured_id, 'featured-large');
+    
+    // Get alt text
+    $alt = get_post_meta($featured_id, '_wp_attachment_image_alt', true);
+    
+    return array(
+        'id' => $featured_id,
+        'alt' => $alt,
+        'thumbnail' => $small ? $small[0] : '',
+        'medium' => $medium ? $medium[0] : '',
+        'large' => $large ? $large[0] : '',
+        'full' => $full ? $full[0] : '',
+        'featured_small' => $featured_small ? $featured_small[0] : '',
+        'featured_medium' => $featured_medium ? $featured_medium[0] : '',
+        'featured_large' => $featured_large ? $featured_large[0] : '',
+        'sizes' => array(
+            'thumbnail' => $small ? array('url' => $small[0], 'width' => $small[1], 'height' => $small[2]) : null,
+            'medium' => $medium ? array('url' => $medium[0], 'width' => $medium[1], 'height' => $medium[2]) : null,
+            'large' => $large ? array('url' => $large[0], 'width' => $large[1], 'height' => $large[2]) : null,
+            'full' => $full ? array('url' => $full[0], 'width' => $full[1], 'height' => $full[2]) : null,
+            'featured_small' => $featured_small ? array('url' => $featured_small[0], 'width' => $featured_small[1], 'height' => $featured_small[2]) : null,
+            'featured_medium' => $featured_medium ? array('url' => $featured_medium[0], 'width' => $featured_medium[1], 'height' => $featured_medium[2]) : null,
+            'featured_large' => $featured_large ? array('url' => $featured_large[0], 'width' => $featured_large[1], 'height' => $featured_large[2]) : null,
+        ),
+    );
+}
