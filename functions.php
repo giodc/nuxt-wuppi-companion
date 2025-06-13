@@ -402,3 +402,34 @@ function nuxt_wuppi_get_featured_image($post) {
         ),
     );
 }
+
+/**
+ * Filter blocks to remove absolute URLs
+ */
+add_filter( 'render_block', function( $block_content, $block ) {
+	// Target specific blocks
+	if ( isset( $block['blockName'] ) && in_array( $block['blockName'], [ 'core/page-list', 'core/latest-posts', 'core/tag-cloud', 'core/post-template', 'core/query' ] ) ) {
+		$home_url = home_url();
+
+		// Use DOMDocument to safely parse and rewrite URLs
+		libxml_use_internal_errors( true );
+		$dom = new DOMDocument();
+		$dom->loadHTML('<?xml encoding="utf-8" ?>' . $block_content);
+
+		$links = $dom->getElementsByTagName('a');
+		foreach ( $links as $link ) {
+			$href = $link->getAttribute('href');
+			if ( strpos( $href, $home_url ) === 0 ) {
+				$relative_url = str_replace( $home_url, '', $href );
+				$link->setAttribute( 'href', $relative_url );
+			}
+		}
+
+		$body = $dom->getElementsByTagName('body')->item(0);
+		$block_content = '';
+		foreach ( $body->childNodes as $child ) {
+			$block_content .= $dom->saveHTML($child);
+		}
+	}
+	return $block_content;
+}, 10, 2 );
