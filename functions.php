@@ -434,10 +434,6 @@ add_filter( 'render_block', function( $block_content, $block ) {
 	return $block_content;
 }, 10, 2 );
 
-
-
-
-
 /**
  * Filter Yoast sitemap URLs to use headless frontend domain
  */
@@ -457,4 +453,10 @@ function modify_yoast_sitemap_urls($url, $type = null, $object = null) {
     
     return $modified_url;
 }
-add_filter('wpseo_sitemap_url', 'modify_yoast_sitemap_urls', 10, 2);
+
+/**
+ * Check if Yoast SEO is active and add filter
+ */
+if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+    add_filter('wpseo_sitemap_url', 'modify_yoast_sitemap_urls', 10, 2);
+}
