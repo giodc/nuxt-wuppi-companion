@@ -496,4 +496,88 @@ function nuxt_wuppi_add_subtitle_to_rest() {
 }
 add_action('rest_api_init', 'nuxt_wuppi_add_subtitle_to_rest');
 
+/**
+ * Register subtitle field with WPGraphQL
+ */
+function nuxt_wuppi_add_subtitle_to_graphql() {
+    // Check if WPGraphQL is active
+    if (!function_exists('register_graphql_field')) {
+        return;
+    }
+    
+    // Register the subtitle field for the Post type in GraphQL
+    register_graphql_field('Post', 'subtitle', [
+        'type' => 'String',
+        'description' => __('The subtitle of the post', 'nuxt-wuppi-companion'),
+        'resolve' => function($post) {
+            $post_id = $post->databaseId;
+            return get_post_meta($post_id, 'subtitle', true);
+        }
+    ]);
+}
+add_action('graphql_register_types', 'nuxt_wuppi_add_subtitle_to_graphql');
+
+/**
+ * Add subtitle meta box to post editor
+ */
+function nuxt_wuppi_add_subtitle_meta_box() {
+    add_meta_box(
+        'nuxt_wuppi_subtitle_meta_box',
+        __('Post Subtitle', 'nuxt-wuppi-companion'),
+        'nuxt_wuppi_subtitle_meta_box_callback',
+        'post',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'nuxt_wuppi_add_subtitle_meta_box');
+
+/**
+ * Render subtitle meta box content
+ */
+function nuxt_wuppi_subtitle_meta_box_callback($post) {
+    // Add nonce for security
+    wp_nonce_field('nuxt_wuppi_subtitle_meta_box', 'nuxt_wuppi_subtitle_meta_box_nonce');
+    
+    // Get current subtitle value
+    $subtitle = get_post_meta($post->ID, 'subtitle', true);
+    
+    // Output field
+    echo '<div style="padding: 5px 0;">';
+    echo '<label for="nuxt_wuppi_subtitle" style="display: block; font-weight: bold; margin-bottom: 5px;">' . __('Enter a subtitle for this post', 'nuxt-wuppi-companion') . '</label>';
+    echo '<input type="text" id="nuxt_wuppi_subtitle" name="nuxt_wuppi_subtitle" value="' . esc_attr($subtitle) . '" style="width: 100%; padding: 8px; font-size: 1.2em;" />';
+    echo '</div>';
+}
+
+/**
+ * Save subtitle meta box data
+ */
+function nuxt_wuppi_save_subtitle_meta_box($post_id) {
+    // Check if nonce is set
+    if (!isset($_POST['nuxt_wuppi_subtitle_meta_box_nonce'])) {
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nuxt_wuppi_subtitle_meta_box_nonce'], 'nuxt_wuppi_subtitle_meta_box')) {
+        return;
+    }
+    
+    // Check autosave
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+    
+    // Save subtitle
+    if (isset($_POST['nuxt_wuppi_subtitle'])) {
+        update_post_meta($post_id, 'subtitle', sanitize_text_field($_POST['nuxt_wuppi_subtitle']));
+    }
+}
+add_action('save_post', 'nuxt_wuppi_save_subtitle_meta_box');
+
 
