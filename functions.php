@@ -433,3 +433,28 @@ add_filter( 'render_block', function( $block_content, $block ) {
 	}
 	return $block_content;
 }, 10, 2 );
+
+
+
+
+
+/**
+ * Filter Yoast sitemap URLs to use headless frontend domain
+ */
+function modify_yoast_sitemap_urls($url, $type = null, $object = null) {
+    // Your WordPress backend domain
+    $wordpress_domain = get_site_url();
+    $nuxt_wuppi_redirect_url = get_theme_mod( 'nuxt_wuppi_redirect_url' );
+   
+    if ( empty( $nuxt_wuppi_redirect_url ) ) {
+        $frontend_domain = $wordpress_domain;
+    } else {
+        $frontend_domain = $nuxt_wuppi_redirect_url;
+    }
+    
+    // Replace the WordPress domain with your frontend domain
+    $modified_url = str_replace($wordpress_domain, $frontend_domain, $url);
+    
+    return $modified_url;
+}
+add_filter('wpseo_sitemap_url', 'modify_yoast_sitemap_urls', 10, 2);
