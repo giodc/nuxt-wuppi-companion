@@ -460,3 +460,40 @@ function modify_yoast_sitemap_urls($url, $type = null, $object = null) {
 if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
     add_filter('wpseo_sitemap_url', 'modify_yoast_sitemap_urls', 10, 2);
 }
+
+/**
+ * Register custom meta field 'subtitle' for posts
+ */
+function nuxt_wuppi_register_post_meta() {
+    register_post_meta('post', 'subtitle', [
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+        'auth_callback' => function() {
+            return current_user_can('edit_posts');
+        },
+        'sanitize_callback' => 'sanitize_text_field',
+    ]);
+}
+add_action('init', 'nuxt_wuppi_register_post_meta');
+
+/**
+ * Add subtitle field to REST API response
+ */
+function nuxt_wuppi_add_subtitle_to_rest() {
+    register_rest_field('post', 'subtitle', [
+        'get_callback' => function($post) {
+            return get_post_meta($post['id'], 'subtitle', true);
+        },
+        'update_callback' => function($value, $post) {
+            return update_post_meta($post->ID, 'subtitle', sanitize_text_field($value));
+        },
+        'schema' => [
+            'description' => __('Post subtitle', 'nuxt-wuppi-companion'),
+            'type' => 'string',
+        ],
+    ]);
+}
+add_action('rest_api_init', 'nuxt_wuppi_add_subtitle_to_rest');
+
+
