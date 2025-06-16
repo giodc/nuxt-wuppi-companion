@@ -11,11 +11,13 @@ Nuxt-Wuppi-Companion modifies WordPress behavior to work seamlessly in a headles
 - **Headless Mode**: Redirects frontend requests to your headless application
 - **URL Rewriting**: Modifies permalinks to work with your frontend routing (adds `/page/` prefix)
 - **Enhanced REST API**: Adds featured images data to REST API responses
-- **Yoast SEO Integration**: Modifies sitemap URLs to use your frontend domain
 - **Block Content Filtering**: Removes absolute URLs from block content
 - **Comments Disabled**: Completely disables the WordPress comment system
 - **Custom Image Sizes**: Provides multiple image sizes optimized for frontend use
 - **Custom Subtitle Meta Field**: Adds a 'subtitle' field to posts for additional content
+- **Yoast SEO Integration**: Modifies sitemap URLs to use your frontend domain
+- **Yoast Twitter Integration**: Modifies Twitter URLs to use your frontend domain
+- **Yoast Schema Integration**: Modifies schema URLs to use your frontend domain
 
 ## Installation
 

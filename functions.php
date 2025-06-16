@@ -461,6 +461,72 @@ if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_opti
     add_filter('wpseo_sitemap_url', 'modify_yoast_sitemap_urls', 10, 2);
 }
 
+
+function modify_yoast_canonical_url($canonical_url) {
+    
+    $wordpress_domain = get_site_url();
+    $nuxt_wuppi_redirect_url = get_theme_mod( 'nuxt_wuppi_redirect_url' );
+   
+    if ( empty( $nuxt_wuppi_redirect_url ) ) {
+        $frontend_domain = $wordpress_domain;
+    } else {
+        $frontend_domain = $nuxt_wuppi_redirect_url;
+    }
+    
+    // Replace the WordPress domain with your frontend domain
+    $modified_canonical = str_replace($wordpress_domain, $frontend_domain, $canonical_url);
+    
+    return $modified_canonical;
+}
+if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+    add_filter('wpseo_canonical', 'modify_yoast_canonical_url');
+}
+
+
+
+/**
+ * Optional: Also modify Open Graph URL (og:url) for social sharing
+ */
+function modify_yoast_opengraph_url($og_url) {
+  
+
+    $wordpress_domain = get_site_url();
+    $nuxt_wuppi_redirect_url = get_theme_mod( 'nuxt_wuppi_redirect_url' );
+   
+    if ( empty( $nuxt_wuppi_redirect_url ) ) {
+        $frontend_domain = $wordpress_domain;
+    } else {
+        $frontend_domain = $nuxt_wuppi_redirect_url;
+    }
+
+
+    return str_replace($wordpress_domain, $frontend_domain, $og_url);
+}
+if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+    add_filter('wpseo_opengraph_url', 'modify_yoast_opengraph_url');
+}
+
+
+/**
+ * Optional: Also modify Twitter URL for Twitter cards
+ */
+function modify_yoast_twitter_url($twitter_url) {
+    $wordpress_domain = get_site_url();
+    $nuxt_wuppi_redirect_url = get_theme_mod( 'nuxt_wuppi_redirect_url' );
+   
+    if ( empty( $nuxt_wuppi_redirect_url ) ) {
+        $frontend_domain = $wordpress_domain;
+    } else {
+        $frontend_domain = $nuxt_wuppi_redirect_url;
+    }
+    return str_replace($wordpress_domain, $frontend_domain, $twitter_url);
+}
+if(in_array('wordpress-seo/wp-seo.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+    add_filter('wpseo_twitter_url', 'modify_yoast_twitter_url');
+}
+
+
+
 /**
  * Register custom meta field 'subtitle' for posts
  */
@@ -579,5 +645,7 @@ function nuxt_wuppi_save_subtitle_meta_box($post_id) {
     }
 }
 add_action('save_post', 'nuxt_wuppi_save_subtitle_meta_box');
+
+
 
 
