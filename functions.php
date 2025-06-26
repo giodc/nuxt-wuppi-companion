@@ -666,6 +666,16 @@ add_action('graphql_register_types', function() {
                 $page_on_front = get_option('page_on_front', 0);
                 return $page_on_front ? (string)$page_on_front : null;
             }
+        ],
+        'pageForPosts' => [
+            'type' => 'String',
+            'description' => 'The ID of the page set as posts page',
+            'resolve' => function() {
+                $page_for_posts = get_option('page_for_posts', 0);
+                return $page_for_posts ? (string)$page_for_posts : null;
+            }
         ]
     ]);
 });
+
+
