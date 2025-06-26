@@ -649,3 +649,23 @@ add_action('save_post', 'nuxt_wuppi_save_subtitle_meta_box');
 
 
 
+// Add homepage settings to GraphQL schema
+add_action('graphql_register_types', function() {
+    register_graphql_fields('GeneralSettings', [
+        'showOnFront' => [
+            'type' => 'String',
+            'description' => 'What to show on the front page',
+            'resolve' => function() {
+                return get_option('show_on_front', 'posts');
+            }
+        ],
+        'pageOnFront' => [
+            'type' => 'String',
+            'description' => 'The ID of the page set as homepage',
+            'resolve' => function() {
+                $page_on_front = get_option('page_on_front', 0);
+                return $page_on_front ? (string)$page_on_front : null;
+            }
+        ]
+    ]);
+});
