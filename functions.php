@@ -404,35 +404,103 @@ function nuxt_wuppi_get_featured_image($post) {
 }
 
 /**
- * Filter blocks to remove absolute URLs
+ * Replace absolute URLs in content with headless frontend URL
+ */
+function nuxt_wuppi_replace_content_urls( $content ) {
+    // Get the redirect URL from theme customizer
+    $redirect_url = get_theme_mod( 'nuxt_wuppi_redirect_url' );
+    
+    // If no redirect URL is set, return content unchanged
+    if ( empty( $redirect_url ) ) {
+        return $content;
+    }
+    
+    // Remove trailing slash from redirect URL for consistency
+    $redirect_url = rtrim( $redirect_url, '/' );
+    
+    // Get the current site URL
+    $home_url = home_url();
+    $site_url = site_url();
+    
+    // Use DOMDocument to safely parse and modify URLs
+    if ( ! empty( $content ) && ( strpos( $content, '<a ' ) !== false || strpos( $content, 'href=' ) !== false ) ) {
+        libxml_use_internal_errors( true );
+        $dom = new DOMDocument();
+        $dom->encoding = 'UTF-8';
+        
+        // Load HTML with proper encoding
+        $dom->loadHTML( '<?xml encoding="UTF-8"?>' . '<div>' . $content . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+        
+        // Find all links
+        $links = $dom->getElementsByTagName( 'a' );
+        
+        foreach ( $links as $link ) {
+            $href = $link->getAttribute( 'href' );
+            
+            // Skip empty hrefs, anchors, mailto, tel, and external URLs
+            if ( empty( $href ) || 
+                 strpos( $href, '#' ) === 0 || 
+                 strpos( $href, 'mailto:' ) === 0 || 
+                 strpos( $href, 'tel:' ) === 0 || 
+                 strpos( $href, 'javascript:' ) === 0 ||
+                 ( strpos( $href, 'http' ) === 0 && strpos( $href, $home_url ) !== 0 && strpos( $href, $site_url ) !== 0 ) ) {
+                continue;
+            }
+            
+            // Handle absolute URLs that point to this site
+            if ( strpos( $href, $home_url ) === 0 ) {
+                $relative_path = str_replace( $home_url, '', $href );
+                $new_url = $redirect_url . $relative_path;
+                $link->setAttribute( 'href', $new_url );
+            }
+            // Handle absolute URLs that point to site_url (if different from home_url)
+            elseif ( $site_url !== $home_url && strpos( $href, $site_url ) === 0 ) {
+                $relative_path = str_replace( $site_url, '', $href );
+                $new_url = $redirect_url . $relative_path;
+                $link->setAttribute( 'href', $new_url );
+            }
+            // Handle relative URLs that start with /
+            elseif ( strpos( $href, '/' ) === 0 && strpos( $href, '//' ) !== 0 ) {
+                $new_url = $redirect_url . $href;
+                $link->setAttribute( 'href', $new_url );
+            }
+        }
+        
+        // Get the modified content
+        $body = $dom->getElementsByTagName( 'div' )->item( 0 );
+        if ( $body ) {
+            $modified_content = '';
+            foreach ( $body->childNodes as $child ) {
+                $modified_content .= $dom->saveHTML( $child );
+            }
+            return $modified_content;
+        }
+    }
+    
+    return $content;
+}
+
+/**
+ * Filter all block content to replace URLs
  */
 add_filter( 'render_block', function( $block_content, $block ) {
-	// Target specific blocks
-	if ( isset( $block['blockName'] ) && in_array( $block['blockName'], [ 'core/page-list', 'core/latest-posts', 'core/tag-cloud', 'core/post-template', 'core/query' ] ) ) {
-		$home_url = home_url();
-
-		// Use DOMDocument to safely parse and rewrite URLs
-		libxml_use_internal_errors( true );
-		$dom = new DOMDocument();
-		$dom->loadHTML('<?xml encoding="utf-8" ?>' . $block_content);
-
-		$links = $dom->getElementsByTagName('a');
-		foreach ( $links as $link ) {
-			$href = $link->getAttribute('href');
-			if ( strpos( $href, $home_url ) === 0 ) {
-				$relative_url = str_replace( $home_url, '', $href );
-				$link->setAttribute( 'href', $relative_url );
-			}
-		}
-
-		$body = $dom->getElementsByTagName('body')->item(0);
-		$block_content = '';
-		foreach ( $body->childNodes as $child ) {
-			$block_content .= $dom->saveHTML($child);
-		}
-	}
-	return $block_content;
+    return nuxt_wuppi_replace_content_urls( $block_content );
 }, 10, 2 );
+
+/**
+ * Filter post content to replace URLs (for classic editor content)
+ */
+add_filter( 'the_content', 'nuxt_wuppi_replace_content_urls', 20 );
+
+/**
+ * Filter excerpt content to replace URLs
+ */
+add_filter( 'the_excerpt', 'nuxt_wuppi_replace_content_urls', 20 );
+
+/**
+ * Filter widget text content to replace URLs
+ */
+add_filter( 'widget_text', 'nuxt_wuppi_replace_content_urls', 20 );
 
 /**
  * Filter Yoast sitemap URLs to use headless frontend domain

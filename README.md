@@ -19,6 +19,8 @@ Nuxt-Wuppi-Companion modifies WordPress behavior to work seamlessly in a headles
 - **Yoast Twitter Integration**: Modifies Twitter URLs to use your frontend domain
 - **Yoast Schema Integration**: Modifies schema URLs to use your frontend domain
 - **Homepage Settings**: Adds homepage settings to GraphQL schema
+- **Page For Posts**: Adds page for posts to GraphQL schema
+- **Subtitle Meta Field**: Adds subtitle meta field to posts
 
 ## Installation
 
