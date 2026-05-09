@@ -881,7 +881,7 @@ add_action( 'add_meta_boxes', 'nuxt_wuppi_add_review_status_meta_box' );
 function nuxt_wuppi_review_status_meta_box_callback( $post ) {
     wp_nonce_field( 'nuxt_wuppi_review_status', 'nuxt_wuppi_review_status_nonce' );
     $current = get_post_meta( $post->ID, '_nuxt_wuppi_review_status', true );
-    echo '<select name="nuxt_wuppi_review_status" style="width:100%;margin-top:4px;">';
+    echo '<select name="nuxt_wuppi_review_status" style="width:100%;max-width:100%;box-sizing:border-box;margin-top:4px;">';
     echo '<option value="">' . esc_html__( '— No Status —', 'nuxt-wuppi-companion' ) . '</option>';
     foreach ( nuxt_wuppi_review_status_options() as $value => $label ) {
         echo '<option value="' . esc_attr( $value ) . '"' . selected( $current, $value, false ) . '>' . esc_html( $label ) . '</option>';
