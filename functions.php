@@ -718,6 +718,106 @@ add_action('save_post', 'nuxt_wuppi_save_subtitle_meta_box');
 
 
 /**
+ * Register Yoast SEO meta fields in REST API for all public post types
+ * Integrates: https://github.com/verydima/seo-fields-api-support
+ * Extended with focus keyword support
+ */
+function nuxt_wuppi_register_yoast_meta_for_rest() {
+    if ( ! defined( 'WPSEO_VERSION' ) ) {
+        return;
+    }
+
+    $args = array(
+        'show_in_rest'      => true,
+        'single'            => true,
+        'type'              => 'string',
+        'auth_callback'     => function() {
+            return current_user_can( 'edit_posts' );
+        },
+        'sanitize_callback' => 'sanitize_text_field',
+    );
+
+    foreach ( get_post_types( array( 'public' => true ), 'names' ) as $post_type ) {
+        register_post_meta( $post_type, '_yoast_wpseo_title', $args );
+        register_post_meta( $post_type, '_yoast_wpseo_metadesc', $args );
+        register_post_meta( $post_type, '_yoast_wpseo_focuskw', $args );
+    }
+}
+add_action( 'rest_api_init', 'nuxt_wuppi_register_yoast_meta_for_rest' );
+
+/**
+ * Expose a clean yoast_seo composite object in REST API responses
+ */
+function nuxt_wuppi_add_yoast_seo_to_rest() {
+    if ( ! defined( 'WPSEO_VERSION' ) ) {
+        return;
+    }
+
+    $post_types = get_post_types( array( 'public' => true ), 'names' );
+
+    foreach ( $post_types as $post_type ) {
+        register_rest_field(
+            $post_type,
+            'yoast_seo',
+            array(
+                'get_callback' => function( $post ) {
+                    $id = $post['id'];
+                    return array(
+                        'title'     => get_post_meta( $id, '_yoast_wpseo_title', true ),
+                        'metadesc'  => get_post_meta( $id, '_yoast_wpseo_metadesc', true ),
+                        'focuskw'   => get_post_meta( $id, '_yoast_wpseo_focuskw', true ),
+                    );
+                },
+                'update_callback' => null,
+                'schema'          => array(
+                    'description' => __( 'Yoast SEO fields', 'nuxt-wuppi-companion' ),
+                    'type'        => 'object',
+                ),
+            )
+        );
+    }
+}
+add_action( 'rest_api_init', 'nuxt_wuppi_add_yoast_seo_to_rest' );
+
+/**
+ * Register Yoast SEO fields with WPGraphQL
+ */
+function nuxt_wuppi_add_yoast_seo_to_graphql() {
+    if ( ! function_exists( 'register_graphql_field' ) || ! defined( 'WPSEO_VERSION' ) ) {
+        return;
+    }
+
+    $graphql_types = array( 'Post', 'Page' );
+
+    foreach ( $graphql_types as $type ) {
+        register_graphql_field( $type, 'yoastSeoTitle', array(
+            'type'        => 'String',
+            'description' => __( 'Yoast SEO title', 'nuxt-wuppi-companion' ),
+            'resolve'     => function( $post ) {
+                return get_post_meta( $post->databaseId, '_yoast_wpseo_title', true );
+            },
+        ) );
+
+        register_graphql_field( $type, 'yoastMetaDesc', array(
+            'type'        => 'String',
+            'description' => __( 'Yoast SEO meta description', 'nuxt-wuppi-companion' ),
+            'resolve'     => function( $post ) {
+                return get_post_meta( $post->databaseId, '_yoast_wpseo_metadesc', true );
+            },
+        ) );
+
+        register_graphql_field( $type, 'yoastFocusKeyword', array(
+            'type'        => 'String',
+            'description' => __( 'Yoast SEO focus keyword', 'nuxt-wuppi-companion' ),
+            'resolve'     => function( $post ) {
+                return get_post_meta( $post->databaseId, '_yoast_wpseo_focuskw', true );
+            },
+        ) );
+    }
+}
+add_action( 'graphql_register_types', 'nuxt_wuppi_add_yoast_seo_to_graphql' );
+
+/**
  * Add featured image column to posts list table
  */
 function nuxt_wuppi_add_post_thumbnail_column( $columns ) {

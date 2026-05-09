@@ -18,9 +18,11 @@ Nuxt-Wuppi-Companion modifies WordPress behavior to work seamlessly in a headles
 - **Yoast SEO Integration**: Modifies sitemap URLs to use your frontend domain
 - **Yoast Twitter Integration**: Modifies Twitter URLs to use your frontend domain
 - **Yoast Schema Integration**: Modifies schema URLs to use your frontend domain
+- **Yoast SEO Fields API**: Exposes Yoast SEO title, meta description, and focus keyword via REST API (`yoast_seo` object) and WPGraphQL (`yoastSeoTitle`, `yoastMetaDesc`, `yoastFocusKeyword` fields)
 - **Homepage Settings**: Adds homepage settings to GraphQL schema
 - **Page For Posts**: Adds page for posts to GraphQL schema
 - **Subtitle Meta Field**: Adds subtitle meta field to posts
+- **Featured Image Column**: Adds a thumbnail preview column to the Posts and Pages admin list tables
 
 ## Installation
 
