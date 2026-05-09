@@ -818,6 +818,194 @@ function nuxt_wuppi_add_yoast_seo_to_graphql() {
 add_action( 'graphql_register_types', 'nuxt_wuppi_add_yoast_seo_to_graphql' );
 
 /**
+ * Review Status: available options
+ */
+function nuxt_wuppi_review_status_options() {
+    return array(
+        'pending'     => __( 'Pending', 'nuxt-wuppi-companion' ),
+        'in_progress' => __( 'In Progress', 'nuxt-wuppi-companion' ),
+        'done'        => __( 'Done', 'nuxt-wuppi-companion' ),
+    );
+}
+
+/**
+ * Get all public non-builtin post types
+ */
+function nuxt_wuppi_get_custom_post_types() {
+    return get_post_types( array( 'public' => true, '_builtin' => false ), 'names' );
+}
+
+/**
+ * Register review status meta for all custom post types (REST API + classic)
+ */
+function nuxt_wuppi_register_review_status_meta() {
+    $args = array(
+        'show_in_rest'      => true,
+        'single'            => true,
+        'type'              => 'string',
+        'auth_callback'     => function() {
+            return current_user_can( 'edit_posts' );
+        },
+        'sanitize_callback' => 'sanitize_key',
+    );
+    foreach ( nuxt_wuppi_get_custom_post_types() as $post_type ) {
+        register_post_meta( $post_type, '_nuxt_wuppi_review_status', $args );
+    }
+}
+add_action( 'init', 'nuxt_wuppi_register_review_status_meta', 20 );
+
+/**
+ * Add review status meta box to all custom post types
+ */
+function nuxt_wuppi_add_review_status_meta_box() {
+    $post_types = array_values( nuxt_wuppi_get_custom_post_types() );
+    if ( empty( $post_types ) ) {
+        return;
+    }
+    add_meta_box(
+        'nuxt_wuppi_review_status',
+        __( 'Review Status', 'nuxt-wuppi-companion' ),
+        'nuxt_wuppi_review_status_meta_box_callback',
+        $post_types,
+        'side',
+        'high'
+    );
+}
+add_action( 'add_meta_boxes', 'nuxt_wuppi_add_review_status_meta_box' );
+
+/**
+ * Render review status meta box
+ */
+function nuxt_wuppi_review_status_meta_box_callback( $post ) {
+    wp_nonce_field( 'nuxt_wuppi_review_status', 'nuxt_wuppi_review_status_nonce' );
+    $current = get_post_meta( $post->ID, '_nuxt_wuppi_review_status', true );
+    echo '<select name="nuxt_wuppi_review_status" style="width:100%;margin-top:4px;">';
+    echo '<option value="">' . esc_html__( '— No Status —', 'nuxt-wuppi-companion' ) . '</option>';
+    foreach ( nuxt_wuppi_review_status_options() as $value => $label ) {
+        echo '<option value="' . esc_attr( $value ) . '"' . selected( $current, $value, false ) . '>' . esc_html( $label ) . '</option>';
+    }
+    echo '</select>';
+}
+
+/**
+ * Save review status meta
+ */
+function nuxt_wuppi_save_review_status_meta( $post_id ) {
+    if ( ! isset( $_POST['nuxt_wuppi_review_status_nonce'] ) ) {
+        return;
+    }
+    if ( ! wp_verify_nonce( $_POST['nuxt_wuppi_review_status_nonce'], 'nuxt_wuppi_review_status' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+    $value   = isset( $_POST['nuxt_wuppi_review_status'] ) ? sanitize_key( $_POST['nuxt_wuppi_review_status'] ) : '';
+    $allowed = array_keys( nuxt_wuppi_review_status_options() );
+    if ( $value === '' || in_array( $value, $allowed, true ) ) {
+        update_post_meta( $post_id, '_nuxt_wuppi_review_status', $value );
+    }
+}
+add_action( 'save_post', 'nuxt_wuppi_save_review_status_meta' );
+
+/**
+ * Add review status column + filter hooks for each custom post type
+ */
+function nuxt_wuppi_register_review_status_columns() {
+    foreach ( nuxt_wuppi_get_custom_post_types() as $post_type ) {
+        add_filter( "manage_{$post_type}_posts_columns", function( $columns ) {
+            $columns['review_status'] = __( 'Review Status', 'nuxt-wuppi-companion' );
+            return $columns;
+        } );
+        add_action( "manage_{$post_type}_posts_custom_column", 'nuxt_wuppi_display_review_status_column', 10, 2 );
+    }
+}
+add_action( 'admin_init', 'nuxt_wuppi_register_review_status_columns' );
+
+/**
+ * Display review status badge in list table column
+ */
+function nuxt_wuppi_display_review_status_column( $column, $post_id ) {
+    if ( $column !== 'review_status' ) {
+        return;
+    }
+    $value   = get_post_meta( $post_id, '_nuxt_wuppi_review_status', true );
+    $options = nuxt_wuppi_review_status_options();
+    if ( $value && isset( $options[ $value ] ) ) {
+        echo '<span class="nuxt-wuppi-review-status nuxt-wuppi-status-' . esc_attr( $value ) . '">' . esc_html( $options[ $value ] ) . '</span>';
+    } else {
+        echo '<span style="color:#aaa;">&mdash;</span>';
+    }
+}
+
+/**
+ * Add review status dropdown filter to custom post type list tables
+ */
+function nuxt_wuppi_review_status_filter_dropdown( $post_type ) {
+    if ( ! in_array( $post_type, nuxt_wuppi_get_custom_post_types(), true ) ) {
+        return;
+    }
+    $current = isset( $_GET['nuxt_wuppi_review_status_filter'] ) ? sanitize_key( $_GET['nuxt_wuppi_review_status_filter'] ) : '';
+    echo '<select name="nuxt_wuppi_review_status_filter">';
+    echo '<option value="">' . esc_html__( 'All Review Statuses', 'nuxt-wuppi-companion' ) . '</option>';
+    foreach ( nuxt_wuppi_review_status_options() as $value => $label ) {
+        echo '<option value="' . esc_attr( $value ) . '"' . selected( $current, $value, false ) . '>' . esc_html( $label ) . '</option>';
+    }
+    echo '</select>';
+}
+add_action( 'restrict_manage_posts', 'nuxt_wuppi_review_status_filter_dropdown' );
+
+/**
+ * Apply review status filter to the admin query
+ */
+function nuxt_wuppi_apply_review_status_filter( $query ) {
+    if ( ! is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+    if ( empty( $_GET['nuxt_wuppi_review_status_filter'] ) ) {
+        return;
+    }
+    $screen = get_current_screen();
+    if ( ! $screen || ! in_array( $screen->post_type, nuxt_wuppi_get_custom_post_types(), true ) ) {
+        return;
+    }
+    $value   = sanitize_key( $_GET['nuxt_wuppi_review_status_filter'] );
+    $allowed = array_keys( nuxt_wuppi_review_status_options() );
+    if ( ! in_array( $value, $allowed, true ) ) {
+        return;
+    }
+    $query->set( 'meta_query', array(
+        array(
+            'key'     => '_nuxt_wuppi_review_status',
+            'value'   => $value,
+            'compare' => '=',
+        ),
+    ) );
+}
+add_action( 'pre_get_posts', 'nuxt_wuppi_apply_review_status_filter' );
+
+/**
+ * Styles for review status badges in list tables
+ */
+function nuxt_wuppi_review_status_admin_styles() {
+    $screen = get_current_screen();
+    if ( ! $screen || $screen->base !== 'edit' || ! in_array( $screen->post_type, nuxt_wuppi_get_custom_post_types(), true ) ) {
+        return;
+    }
+    echo '<style>
+        .nuxt-wuppi-review-status { display:inline-block; padding:2px 8px; border-radius:3px; font-size:12px; font-weight:600; }
+        .nuxt-wuppi-status-pending { background:#fff3cd; color:#856404; }
+        .nuxt-wuppi-status-in_progress { background:#cce5ff; color:#004085; }
+        .nuxt-wuppi-status-done { background:#d4edda; color:#155724; }
+        .column-review_status { width:120px; }
+    </style>';
+}
+add_action( 'admin_head', 'nuxt_wuppi_review_status_admin_styles' );
+
+/**
  * Add featured image column to posts list table
  */
 function nuxt_wuppi_add_post_thumbnail_column( $columns ) {
