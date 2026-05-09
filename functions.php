@@ -717,6 +717,48 @@ add_action('save_post', 'nuxt_wuppi_save_subtitle_meta_box');
 
 
 
+/**
+ * Add featured image column to posts list table
+ */
+function nuxt_wuppi_add_post_thumbnail_column( $columns ) {
+    $new_columns = array();
+    foreach ( $columns as $key => $value ) {
+        if ( $key === 'title' ) {
+            $new_columns['featured_image'] = __( 'Featured Image', 'nuxt-wuppi-companion' );
+        }
+        $new_columns[ $key ] = $value;
+    }
+    return $new_columns;
+}
+add_filter( 'manage_posts_columns', 'nuxt_wuppi_add_post_thumbnail_column' );
+add_filter( 'manage_pages_columns', 'nuxt_wuppi_add_post_thumbnail_column' );
+
+/**
+ * Display featured image in posts/pages list table column
+ */
+function nuxt_wuppi_display_post_thumbnail_column( $column, $post_id ) {
+    if ( $column === 'featured_image' ) {
+        if ( has_post_thumbnail( $post_id ) ) {
+            echo get_the_post_thumbnail( $post_id, array( 60, 60 ), array( 'style' => 'width:60px;height:60px;object-fit:cover;border-radius:4px;display:block;' ) );
+        } else {
+            echo '<span style="color:#aaa;font-size:11px;">&mdash;</span>';
+        }
+    }
+}
+add_action( 'manage_posts_custom_column', 'nuxt_wuppi_display_post_thumbnail_column', 10, 2 );
+add_action( 'manage_pages_custom_column', 'nuxt_wuppi_display_post_thumbnail_column', 10, 2 );
+
+/**
+ * Set column width for featured image column in posts/pages list tables
+ */
+function nuxt_wuppi_featured_image_column_styles() {
+    $screen = get_current_screen();
+    if ( $screen && in_array( $screen->post_type, array( 'post', 'page' ), true ) && $screen->base === 'edit' ) {
+        echo '<style>.column-featured_image{width:80px;text-align:center;}.column-featured_image img{margin:0 auto;}</style>';
+    }
+}
+add_action( 'admin_head', 'nuxt_wuppi_featured_image_column_styles' );
+
 // Add homepage settings to GraphQL schema
 add_action('graphql_register_types', function() {
     register_graphql_fields('GeneralSettings', [
