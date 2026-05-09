@@ -829,10 +829,12 @@ function nuxt_wuppi_review_status_options() {
 }
 
 /**
- * Get all public non-builtin post types
+ * Get all public post types (posts, pages, and CPTs) excluding attachment
  */
 function nuxt_wuppi_get_custom_post_types() {
-    return get_post_types( array( 'public' => true, '_builtin' => false ), 'names' );
+    $post_types = get_post_types( array( 'public' => true ), 'names' );
+    unset( $post_types['attachment'] );
+    return $post_types;
 }
 
 /**
